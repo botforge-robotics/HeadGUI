@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<robot name="Head_URDF" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+  <!-- Base link: dark gray/black. Head: skin tone. Overridden in app for exact colors. -->
+  <material name="base_material">
+    <color rgba="0.11 0.11 0.12 1.0"/>
+  </material>
+  <material name="head_material">
+    <color rgba="0.83 0.65 0.45 1.0"/>
+  </material>
+  <material name="silver">
+    <color rgba="0.11 0.11 0.12 1.0"/>
+  </material>
+</robot>

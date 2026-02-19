@@ -1,0 +1,90 @@
+<?xml version="1.0" ?>
+<robot name="Head_URDF" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find Head_URDF_description)/urdf/materials.xacro" />
+<xacro:include filename="$(find Head_URDF_description)/urdf/Head_URDF.trans" />
+<xacro:include filename="$(find Head_URDF_description)/urdf/Head_URDF.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.0001724280089281166 -0.007058857560234027 0.03281918027692268" rpy="0 0 0"/>
+    <mass value="1.4301440355358608"/>
+    <inertia ixx="0.019006" iyy="0.018146" izz="0.034289" ixy="1e-05" iyz="2e-06" ixz="7e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="head_1">
+  <inertial>
+    <origin xyz="0.005137197909531618 1.8300133261756404e-05 0.14817178980222098" rpy="0 0 0"/>
+    <mass value="4.810819158080557"/>
+    <inertia ixx="0.016307" iyy="0.020811" izz="0.017016" ixy="-5e-06" iyz="2e-06" ixz="0.00207"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.004194 0.007079 -0.1212" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/head_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.004194 0.007079 -0.1212" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/head_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<!-- Virtual Links for 3-Axis Rotation -->
+<link name="yaw_link">
+  <inertial>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <mass value="0.01"/>
+    <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" iyz="0" ixz="0"/>
+  </inertial>
+</link>
+
+<link name="pitch_link">
+  <inertial>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <mass value="0.01"/>
+    <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" iyz="0" ixz="0"/>
+  </inertial>
+</link>
+
+<!-- Articulated Joints -->
+<joint name="joint_yaw" type="continuous">
+  <origin xyz="0.004194 -0.007079 0.145157" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="yaw_link"/>
+  <axis xyz="0 0 1"/>
+</joint>
+
+<joint name="joint_pitch" type="revolute">
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+  <parent link="yaw_link"/>
+  <child link="pitch_link"/>
+  <axis xyz="0 1 0"/>
+  <limit lower="-0.785" upper="0.785" effort="10.0" velocity="1.0"/>
+</joint>
+
+<joint name="joint_roll" type="revolute">
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+  <parent link="pitch_link"/>
+  <child link="head_1"/>
+  <axis xyz="1 0 0"/>
+  <limit lower="-0.785" upper="0.785" effort="10.0" velocity="1.0"/>
+</joint>
+
+</robot>

@@ -1,0 +1,148 @@
+import { useEffect } from "react";
+import { RotateCcw, Camera, Home, MoveRight } from "lucide-react";
+import URDFViewer from "./components/URDFViewer";
+import TimelineStrip from "./components/TimelineStrip";
+import RightPanel from "./components/RightPanel";
+import ConnectionPanel from "./components/ConnectionPanel";
+import { useRobotStore } from "./store/robotStore";
+
+export default function App() {
+  const {
+    targetOrientation,
+    setTargetOrientation,
+    cameraResetTrigger,
+    requestCameraReset,
+    sendHome,
+    sendCurrentRpy,
+    loadConfig,
+    playbackSpeed,
+    setPlaybackSpeed,
+    isConnected,
+  } = useRobotStore();
+
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
+
+  return (
+    <div className="app-root flex flex-col bg-[#0a0a0a] text-zinc-100">
+      {/* Full-screen 3D view (fills everything; UI overlays on top) */}
+      <div className="app-3d-view">
+        <URDFViewer
+          key={cameraResetTrigger}
+          roll={targetOrientation.roll}
+          pitch={targetOrientation.pitch}
+          yaw={targetOrientation.yaw}
+        />
+      </div>
+
+      {/* Top left: Title + reset + connection */}
+      <header
+        className="absolute top-4 left-4 z-20 flex items-center gap-3"
+        style={{ position: "absolute", top: 16, left: 16, zIndex: 20 }}
+      >
+        <h1 className="text-lg font-bold text-white drop-shadow-lg">HeadGUI</h1>
+        <button
+          type="button"
+          onClick={() => setTargetOrientation({ roll: 0, pitch: 0, yaw: 0 })}
+          className="p-2 rounded-xl btn-glass text-zinc-300 hover:text-white"
+          title="Reset pose"
+        >
+          <RotateCcw size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={requestCameraReset}
+          className="p-2 rounded-xl btn-glass text-zinc-300 hover:text-white"
+          title="Reset camera"
+        >
+          <Camera size={16} />
+        </button>
+        <ConnectionPanel />
+      </header>
+
+      {/* Top right: Saved positions + Sequences (vertical panel with tabs) */}
+      <div className="app-right-panel">
+        <RightPanel />
+      </div>
+
+      {/* R/P/Y sliders: responsive, no flip (value clamped in store) */}
+      <div
+        className="absolute z-20 flex flex-col gap-2 py-2 px-3 rounded-xl bg-zinc-900/80 border border-zinc-600/80 backdrop-blur-sm"
+        style={{ bottom: 172, right: 248 }}
+      >
+        {(["roll", "pitch", "yaw"] as const).map((axis) => {
+          const min = axis === "yaw" ? -90 : axis === "pitch" ? -35 : -45;
+          const max = axis === "yaw" ? 90 : axis === "pitch" ? 30 : 45;
+          const value = targetOrientation[axis];
+          const step = 0.5;
+          return (
+            <div key={axis} className="flex items-center gap-2 min-w-[140px]">
+              <span className="text-[10px] font-mono text-zinc-400 w-5 uppercase">
+                {axis[0]}
+              </span>
+              <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                className={`w-24 slider-${axis}`}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setTargetOrientation({ ...targetOrientation, [axis]: v });
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              />
+              <span className="text-[10px] font-mono text-zinc-300 w-8 tabular-nums">
+                {Math.round(value)}°
+              </span>
+            </div>
+          );
+        })}
+        <div className="flex items-center gap-2 pt-1 border-t border-zinc-600/50 mt-1">
+          <span className="text-[10px] font-mono text-zinc-400 w-10">
+            Speed
+          </span>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            step={5}
+            value={playbackSpeed}
+            className="w-20 slider-pitch"
+            onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+            onPointerDown={(e) => e.stopPropagation()}
+          />
+          <span className="text-[10px] font-mono text-zinc-300 w-6 tabular-nums">
+            {playbackSpeed}%
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={sendHome}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
+          title="Home head"
+        >
+          <Home size={14} />
+          Home
+        </button>
+        <button
+          type="button"
+          onClick={sendCurrentRpy}
+          disabled={!isConnected}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold btn-primary disabled:opacity-50"
+          title="Send current RPY to robot"
+        >
+          <MoveRight size={14} />
+          Goto
+        </button>
+      </div>
+
+      {/* Bottom: Timeline strip of square pose cards with thumbnails */}
+      <div className="app-timeline-strip">
+        <TimelineStrip />
+      </div>
+    </div>
+  );
+}
