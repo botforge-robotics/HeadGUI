@@ -36,6 +36,7 @@
 Clone the repo and install dependencies:
 
 ```bash
+git clone https://github.com/botforge-robotics/HeadGUI.git
 cd HeadGUI
 npm install
 ```
