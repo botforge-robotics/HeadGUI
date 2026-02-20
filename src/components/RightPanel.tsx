@@ -1,7 +1,9 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRobotStore } from "../store/robotStore";
 import { Bookmark, ListMusic, Plus, Save, Trash2, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+const AnimatePresenceTyped = AnimatePresence as React.FC<{ children?: React.ReactNode; mode?: "wait" | "popLayout" }>;
 import PoseThumbnail from "./PoseThumbnail";
 
 type Tab = "saved" | "sequences";
@@ -88,7 +90,7 @@ export default function RightPanel() {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-auto">
-        <AnimatePresence mode="wait">
+        <AnimatePresenceTyped mode="wait">
           {tab === "saved" && (
             <motion.div
               key="saved"
@@ -245,7 +247,7 @@ export default function RightPanel() {
               ))}
             </motion.div>
           )}
-        </AnimatePresence>
+        </AnimatePresenceTyped>
       </div>
 
       {/* Save pose name modal */}

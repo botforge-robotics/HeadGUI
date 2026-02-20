@@ -1,6 +1,8 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useRobotStore } from "../store/robotStore";
 import { motion, AnimatePresence } from "framer-motion";
+
+const AnimatePresenceTyped = AnimatePresence as React.FC<{ children?: React.ReactNode; mode?: "wait" | "popLayout" }>;
 import {
   Plus,
   Play,
@@ -230,7 +232,7 @@ export default function TimelineStrip() {
 
       {/* Horizontal scroll of square cards */}
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden flex items-center px-4 py-3 gap-3">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresenceTyped mode="popLayout">
           {activeTimeline?.items.map((item, index) => {
             const normalized =
               item.type === "pose" ||
@@ -350,7 +352,7 @@ export default function TimelineStrip() {
               </motion.div>
             );
           })}
-        </AnimatePresence>
+        </AnimatePresenceTyped>
 
         {/* Add card at end */}
         {activeTimeline && activeTimeline.items.length > 0 && (

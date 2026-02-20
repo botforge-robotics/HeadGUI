@@ -26,7 +26,7 @@
 
 ## Prerequisites
 
-- **Node.js** 18+ and **npm**
+- **Node.js** 14.19.0+ and **npm** (this branch `v14` is for Node 14; use `main` for Node 18+). If install fails due to engine, use `npm install --ignore-engines`.
 - **Linux / Windows / macOS** for running and building
 
 ---
@@ -38,8 +38,18 @@ Clone the repo and install dependencies:
 ```bash
 git clone https://github.com/botforge-robotics/HeadGUI.git
 cd HeadGUI
+git checkout v14
 npm install
 ```
+
+**Node 14 (v14 branch) notes:**
+
+- If npm says *"package-lock.json was generated for lockfileVersion@3"*, the lockfile was created with a newer npm. Regenerate a Node‑14–compatible lockfile with Node 14 active:
+  ```bash
+  nvm use 14.19.0   # or your Node 14
+  rm package-lock.json && npm install
+  ```
+- Warnings about **three-mesh-bvh@0.7.8** and **tar** come from transitive dependencies (@react-three/drei and others). They are safe to ignore on this branch; fixing them would require newer tooling than Node 14 provides.
 
 ---
 

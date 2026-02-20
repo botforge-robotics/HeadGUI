@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRobotStore } from "../store/robotStore";
 import type { SerialPort } from "../types";
 import {
@@ -10,6 +10,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+const AnimatePresenceTyped = AnimatePresence as React.FC<{ children?: React.ReactNode; mode?: "wait" | "popLayout" }>;
 
 /** Web Serial port handle for browser: read loop and close on disconnect */
 interface WebSerialPortHandle {
@@ -187,7 +189,7 @@ export default function ConnectionPanel() {
       </button>
 
       {/* Dropdown Panel */}
-      <AnimatePresence>
+      <AnimatePresenceTyped>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -320,7 +322,7 @@ export default function ConnectionPanel() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresenceTyped>
     </div>
   );
 }

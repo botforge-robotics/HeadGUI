@@ -1,5 +1,8 @@
+import React from "react";
 import { useRobotStore } from "../store/robotStore";
 import { motion, AnimatePresence } from "framer-motion";
+
+const AnimatePresenceTyped = AnimatePresence as React.FC<{ children?: React.ReactNode; mode?: "wait" | "popLayout" }>;
 import {
   Plus,
   Trash2,
@@ -94,7 +97,7 @@ export default function TimelineEditor({
         {/* Scrollable Container */}
         <div className="h-full w-full overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex items-center px-4">
           <div className="flex gap-1 min-w-max items-center h-full py-2">
-            <AnimatePresence mode="popLayout">
+            <AnimatePresenceTyped mode="popLayout">
               {activeTimeline?.items.map((item, index) => {
                 const i = item as TimelineItem;
                 const isPose = i.type === "pose" || !("type" in i);
@@ -183,7 +186,7 @@ export default function TimelineEditor({
                   </motion.div>
                 );
               })}
-            </AnimatePresence>
+            </AnimatePresenceTyped>
 
             {/* Add Button Placeholders if empty */}
             {(!activeTimeline || activeTimeline.items.length === 0) && (
