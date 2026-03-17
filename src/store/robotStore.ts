@@ -5,6 +5,7 @@ import type {
   TimelineItem,
   SavedPose,
 } from "../types";
+import { clampOrientation } from "../robotLimits";
 
 /** Treat legacy items without .type as pose */
 function asTimelineItem(item: any): TimelineItem {
@@ -118,29 +119,7 @@ function waitForSerialDone(
   });
 }
 
-const ROLL_MIN = -30;
-const ROLL_MAX = 30;
-const PITCH_MIN = -30;
-const PITCH_MAX = 30;
-const YAW_MIN = -90;
-const YAW_MAX = 90;
-/** Safety cone: √(roll² + pitch²) ≤ 30 */
-const SAFETY_CONE_DEG = 30;
-
-function clampOrientation(o: RobotOrientation): RobotOrientation {
-  let roll = Math.min(ROLL_MAX, Math.max(ROLL_MIN, o.roll));
-  let pitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, o.pitch));
-  const yaw = Math.min(YAW_MAX, Math.max(YAW_MIN, o.yaw));
-  const mag = Math.sqrt(roll * roll + pitch * pitch);
-  if (mag > SAFETY_CONE_DEG) {
-    const scale = SAFETY_CONE_DEG / mag;
-    roll *= scale;
-    pitch *= scale;
-  }
-  roll = Math.min(ROLL_MAX, Math.max(ROLL_MIN, roll));
-  pitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, pitch));
-  return { roll, pitch, yaw };
-}
+// NOTE: limits + clampOrientation live in ../robotLimits so sliders/gizmo/store stay in sync.
 
 interface RobotState {
   // Orientation state
@@ -397,9 +376,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
 
   setTimelineLoop: (id, loop) => {
     set({
-      timelines: get().timelines.map((t) =>
-        t.id === id ? { ...t, loop } : t,
-      ),
+      timelines: get().timelines.map((t) => (t.id === id ? { ...t, loop } : t)),
       activeTimeline:
         get().activeTimeline?.id === id
           ? { ...get().activeTimeline!, loop }
@@ -593,7 +570,11 @@ export const useRobotStore = create<RobotState>((set, get) => ({
 
     const items = activeTimeline.items;
     if (items.length === 0) {
-      set({ isPlaying: false, playbackActiveIndex: null, playbackDelayProgress: 0 });
+      set({
+        isPlaying: false,
+        playbackActiveIndex: null,
+        playbackDelayProgress: 0,
+      });
       return;
     }
     const runOnePass = async (): Promise<void> => {
