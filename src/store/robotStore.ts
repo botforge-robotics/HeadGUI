@@ -430,11 +430,34 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         ? (window.electronAPI?.serial?.send ?? window.__webSerialSend)
         : null;
 
-    while (buffer && buffer[0] === "{") {
+    // Parse all JSON objects we can find anywhere in the buffer.
+    // Important: firmware output may mix plain text (e.g. "HOMING_DONE\n") with JSON in the same chunk.
+    for (;;) {
+      if (!buffer) break;
+
+      const braceIdx = buffer.indexOf("{");
+      if (braceIdx < 0) break;
+
+      // Anything before the next JSON object may contain line-oriented events (HOMING_DONE etc.)
+      const prefix = buffer.slice(0, braceIdx);
+      if (prefix) {
+        const lines = prefix.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed === "HOMING_DONE" && send) send("STATUS\n");
+        }
+      }
+
+      buffer = buffer.slice(braceIdx);
       const result = extractOneJson(buffer);
-      if (!result) break;
+      if (!result) {
+        // Incomplete JSON: keep it for the next chunk.
+        break;
+      }
+
       buffer = result.rest;
       const obj = result.obj as Record<string, unknown>;
+
       if (
         obj &&
         typeof obj.roll === "number" &&
@@ -449,6 +472,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         if (typeof obj.speed === "number") get().setPlaybackSpeed(obj.speed);
         continue;
       }
+
       if (obj && obj.event === "done") {
         if (DEBUG_SERIAL_DONE)
           console.log("[Timeline] handleSerialData: saw event done");
@@ -459,15 +483,19 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         }
       }
     }
+
+    // Keep only the tail that's useful for future parsing:
+    // - An incomplete JSON object starting with '{', OR
+    // - The last partial line of non-JSON text (so we can detect a split "HOMING_DONE").
     if (buffer) {
-      const lines = buffer.split(/\r?\n/);
-      const last = lines.pop() ?? "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed === "HOMING_DONE" && send) send("STATUS\n");
+      const braceIdx = buffer.indexOf("{");
+      if (braceIdx > 0) buffer = buffer.slice(braceIdx);
+      if (braceIdx < 0) {
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? "";
       }
-      buffer = last;
     }
+
     set({ serialLineBuffer: buffer });
   },
 
