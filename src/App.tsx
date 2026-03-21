@@ -18,6 +18,7 @@ export default function App() {
     playbackSpeed,
     setPlaybackSpeed,
     isConnected,
+    isPlaying,
   } = useRobotStore();
 
   useEffect(() => {
@@ -87,6 +88,7 @@ export default function App() {
                 max={max}
                 step={step}
                 value={value}
+                disabled={isPlaying}
                 className={`w-24 slider-${axis}`}
                 onChange={(e) => {
                   const v = Number(e.target.value);
@@ -110,8 +112,11 @@ export default function App() {
             max={100}
             step={5}
             value={playbackSpeed}
+            disabled={isPlaying}
             className="w-20 slider-pitch"
-            onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+            onChange={(e) => {
+              setPlaybackSpeed(Number(e.target.value));
+            }}
             onPointerDown={(e) => e.stopPropagation()}
           />
           <span className="text-[10px] font-mono text-zinc-300 w-6 tabular-nums">
@@ -121,7 +126,8 @@ export default function App() {
         <button
           type="button"
           onClick={sendHome}
-          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
+          disabled={isPlaying}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600 disabled:opacity-50"
           title="Home head"
         >
           <Home size={14} />
@@ -130,7 +136,7 @@ export default function App() {
         <button
           type="button"
           onClick={sendCurrentRpy}
-          disabled={!isConnected}
+          disabled={!isConnected || isPlaying}
           className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold btn-primary disabled:opacity-50"
           title="Send current RPY to robot"
         >

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useRobotStore } from "../store/robotStore";
 import { Bookmark, ListMusic, Plus, Save, Trash2, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import PoseThumbnail from "./PoseThumbnail";
 
 type Tab = "saved" | "sequences";
 
@@ -115,11 +114,17 @@ export default function RightPanel() {
                   key={pose.id}
                   className="group flex items-center gap-2 p-2 rounded-lg bg-zinc-800/80 border border-zinc-700/50 hover:border-indigo-500/40"
                 >
-                  <div className="w-12 h-12 shrink-0 rounded overflow-hidden border border-zinc-600">
-                    <PoseThumbnail
-                      orientation={pose.orientation}
-                      className="w-full h-full"
-                    />
+                  <div className="w-14 shrink-0 rounded-lg border border-zinc-600 bg-zinc-900 px-1.5 py-1">
+                    <div className="text-[9px] font-mono text-zinc-500">RPY</div>
+                    <div className="text-[10px] font-mono text-zinc-300">
+                      {Math.round(pose.orientation.roll)}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-300">
+                      {Math.round(pose.orientation.pitch)}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-300">
+                      {Math.round(pose.orientation.yaw)}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-zinc-200 truncate">

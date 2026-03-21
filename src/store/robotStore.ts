@@ -7,10 +7,18 @@ import type {
 } from "../types";
 import { clampOrientation } from "../robotLimits";
 
+const SPEED_UI_MIN = 5;
+const SPEED_UI_MAX = 100;
+
 /** Treat legacy items without .type as pose */
 function asTimelineItem(item: any): TimelineItem {
   if (item.type === "delay") return item as TimelineItem;
-  if (item.type === "setspeed") return item as TimelineItem;
+  if (item.type === "setspeed") {
+    const speedPercent = Math.round(
+      Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, item.speedPercent)),
+    );
+    return { ...item, speedPercent } as TimelineItem;
+  }
   return {
     id: item.id,
     type: "pose",
@@ -43,11 +51,27 @@ function extractOneJson(str: string): { obj: unknown; rest: string } | null {
   return null;
 }
 
+function handlePlainSerialLine(
+  line: string,
+  send: ((data: string) => void) | null | undefined,
+): void {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+  if (trimmed === "HOMING_DONE" && send) send("STATUS\n");
+}
+
 /** Wait for "done" via store (browser Web Serial path; handleSerialData resolves this). */
 function waitForDoneSignal(
+  get: () => RobotState,
   set: (s: Partial<RobotState>) => void,
   timeoutMs: number,
 ): Promise<void> {
+  const queuedDoneEvents = get().pendingDoneCount;
+  if (queuedDoneEvents > 0) {
+    set({ pendingDoneCount: queuedDoneEvents - 1 });
+    return Promise.resolve();
+  }
+
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => {
       set({ pendingDoneResolver: null });
@@ -170,6 +194,8 @@ interface RobotState {
   playbackActiveIndex: number | null;
   /** 0..1 progress during a delay item (for UI progress bar). */
   playbackDelayProgress: number;
+  /** Monotonic id to cancel/ignore stale async playback runs. */
+  playbackRunId: number;
 
   // Timeline as sequence: save with name, delete, rename
   saveTimelineAs: (name: string) => void;
@@ -190,6 +216,20 @@ interface RobotState {
   serialLineBuffer: string;
   /** Resolver for browser Web Serial "done" wait (internal). */
   pendingDoneResolver: (() => void) | null;
+  /** Count of completed "done" events received before a waiter was installed. */
+  pendingDoneCount: number;
+}
+
+function normalizePersistedTimeline(raw: any): Timeline | null {
+  if (raw == null || typeof raw !== "object") return null;
+  return {
+    id: raw.id ?? Date.now().toString(),
+    name: typeof raw.name === "string" ? raw.name : "Sequence",
+    items: Array.isArray(raw.items)
+      ? raw.items.map((i: any) => asTimelineItem(i))
+      : [],
+    loop: raw.loop === true,
+  };
 }
 
 export const useRobotStore = create<RobotState>((set, get) => ({
@@ -202,23 +242,28 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   isPlaying: false,
   isConnected: false,
   cameraResetTrigger: 0,
-  playbackSpeed: 50,
+  playbackSpeed: 20,
   isGizmoDragging: false,
   serialLineBuffer: "",
   playbackActiveIndex: null,
   playbackDelayProgress: 0,
+  playbackRunId: 0,
   pendingDoneResolver: null,
+  pendingDoneCount: 0,
 
   requestCameraReset: () =>
     set((s) => ({ cameraResetTrigger: s.cameraResetTrigger + 1 })),
   setGizmoDragging: (v) => set({ isGizmoDragging: v }),
   setPlaybackSpeed: (speed) => {
-    const percent = Math.round(Math.max(5, Math.min(100, speed)));
+    const percent = Math.round(
+      Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, speed)),
+    );
     set({ playbackSpeed: percent });
     if (get().isConnected && typeof window !== "undefined") {
       const send = window.electronAPI?.serial?.send ?? window.__webSerialSend;
       if (send) send(`SPEED ${percent}\n`);
     }
+    get().persistConfig();
   },
 
   addDelay: (durationMs = 500) => {
@@ -253,7 +298,10 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   addSetSpeed: (speedPercent) => {
     const { activeTimeline, playbackSpeed } = get();
     const percent = Math.round(
-      Math.max(5, Math.min(100, speedPercent ?? playbackSpeed)),
+      Math.max(
+        SPEED_UI_MIN,
+        Math.min(SPEED_UI_MAX, speedPercent ?? playbackSpeed),
+      ),
     );
     const newItem: TimelineItem = {
       id: Date.now().toString(),
@@ -302,7 +350,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   updateSetSpeedItem: (id, speedPercent) => {
     const { activeTimeline } = get();
     if (!activeTimeline) return;
-    const percent = Math.round(Math.max(5, Math.min(100, speedPercent)));
+    const percent = Math.round(
+      Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, speedPercent)),
+    );
     const items = activeTimeline.items.map((it) =>
       it.id === id && it.type === "setspeed"
         ? { ...it, speedPercent: percent }
@@ -419,7 +469,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
 
   setTargetOrientationFromRobot: (orientation) => {
     const clamped = clampOrientation(orientation);
-    set({ targetOrientation: clamped, currentOrientation: clamped });
+    set({ currentOrientation: clamped });
   },
 
   handleSerialData: (data) => {
@@ -442,10 +492,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       const prefix = buffer.slice(0, braceIdx);
       if (prefix) {
         const lines = prefix.split(/\r?\n/);
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed === "HOMING_DONE" && send) send("STATUS\n");
-        }
+        for (const line of lines) handlePlainSerialLine(line, send);
       }
 
       buffer = buffer.slice(braceIdx);
@@ -480,6 +527,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         if (resolveDone) {
           set({ pendingDoneResolver: null });
           resolveDone();
+        } else {
+          set({ pendingDoneCount: get().pendingDoneCount + 1 });
         }
       }
     }
@@ -492,6 +541,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       if (braceIdx > 0) buffer = buffer.slice(braceIdx);
       if (braceIdx < 0) {
         const lines = buffer.split(/\r?\n/);
+        for (const line of lines.slice(0, -1))
+          handlePlainSerialLine(line, send);
         buffer = lines.pop() ?? "";
       }
     }
@@ -499,7 +550,10 @@ export const useRobotStore = create<RobotState>((set, get) => ({
     set({ serialLineBuffer: buffer });
   },
 
-  setActiveTimeline: (timeline) => set({ activeTimeline: timeline }),
+  setActiveTimeline: (timeline) => {
+    set({ activeTimeline: timeline });
+    get().persistConfig();
+  },
 
   createNewTimeline: () => {
     const { timelines, activeTimeline } = get();
@@ -577,10 +631,12 @@ export const useRobotStore = create<RobotState>((set, get) => ({
     const { activeTimeline, setTargetOrientation, isConnected } = get();
     if (!activeTimeline || get().isPlaying) return;
 
+    const runId = get().playbackRunId + 1;
     set({
       isPlaying: true,
       playbackActiveIndex: null,
       playbackDelayProgress: 0,
+      playbackRunId: runId,
     });
 
     const api =
@@ -609,10 +665,11 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       const tl = get().activeTimeline;
       const list = tl?.items ?? [];
       for (let index = 0; index < list.length; index++) {
-        if (!get().isPlaying) return;
+        if (!get().isPlaying || get().playbackRunId !== runId) return;
         const raw = list[index];
         const item = asTimelineItem(raw);
 
+        if (get().playbackRunId !== runId) return;
         set({ playbackActiveIndex: index, playbackDelayProgress: 0 });
 
         if (item.type === "pose") {
@@ -630,7 +687,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
                     index + 1,
                     "sent RPY, waiting for done...",
                   );
-                await waitForSerialDone(api, 30000);
+                await waitForSerialDone(api, 120000);
                 if (DEBUG_SERIAL_DONE)
                   console.log(
                     "[Timeline] pose",
@@ -638,7 +695,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
                     "done received, advancing",
                   );
               } else if (useSerial) {
-                await waitForDoneSignal(set, 30000);
+                await waitForDoneSignal(get, set, 120000);
               } else {
                 await new Promise((r) =>
                   setTimeout(
@@ -656,6 +713,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
                   err,
                 );
             }
+            if (get().playbackRunId !== runId) return;
           } else {
             const waitMs =
               item.durationMs * (50 / Math.max(5, currentSpeedPercent));
@@ -665,12 +723,16 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           const durationMs = item.durationMs;
           const tickMs = 50;
           let elapsed = 0;
-          while (elapsed < durationMs && get().isPlaying) {
+          while (
+            elapsed < durationMs &&
+            get().isPlaying &&
+            get().playbackRunId === runId
+          ) {
             await new Promise((r) => setTimeout(r, tickMs));
             elapsed += tickMs;
             set({ playbackDelayProgress: Math.min(1, elapsed / durationMs) });
           }
-          if (!get().isPlaying) return;
+          if (!get().isPlaying || get().playbackRunId !== runId) return;
           await new Promise((r) =>
             setTimeout(r, Math.max(0, durationMs - elapsed)),
           );
@@ -692,15 +754,18 @@ export const useRobotStore = create<RobotState>((set, get) => ({
 
     while (get().isPlaying) {
       await runOnePass();
-      if (!get().isPlaying) break;
+      if (!get().isPlaying || get().playbackRunId !== runId) break;
       if (!get().activeTimeline?.loop) break;
     }
 
-    set({
-      isPlaying: false,
-      playbackActiveIndex: null,
-      playbackDelayProgress: 0,
-    });
+    // Only the latest run is allowed to clear UI state.
+    if (get().playbackRunId === runId) {
+      set({
+        isPlaying: false,
+        playbackActiveIndex: null,
+        playbackDelayProgress: 0,
+      });
+    }
   },
 
   stopPlayback: () =>
@@ -708,12 +773,14 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       isPlaying: false,
       playbackActiveIndex: null,
       playbackDelayProgress: 0,
+      playbackRunId: get().playbackRunId + 1,
     }),
 
   setConnected: (connected) => set({ isConnected: connected }),
 
   sendHome: () => {
-    get().setTargetOrientationFromRobot({ roll: 0, pitch: 0, yaw: 0 });
+    const home = { roll: 0, pitch: 0, yaw: 0 };
+    set({ targetOrientation: home, currentOrientation: home });
     if (get().isConnected && typeof window !== "undefined") {
       const send = window.electronAPI?.serial?.send ?? window.__webSerialSend;
       if (send) send("HOME\n");
@@ -745,16 +812,23 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         ? raw.savedPositions
         : [];
       const timelines = Array.isArray(raw.timelines)
-        ? raw.timelines.map((t: any) => ({
-            id: t.id ?? Date.now().toString(),
-            name: typeof t.name === "string" ? t.name : "Sequence",
-            items: Array.isArray(t.items)
-              ? t.items.map((i: any) => asTimelineItem(i))
-              : [],
-            loop: t.loop === true,
-          }))
+        ? raw.timelines
+            .map((t: any) => normalizePersistedTimeline(t))
+            .filter(Boolean)
         : [];
-      set({ savedPositions, timelines });
+      const activeTimeline =
+        normalizePersistedTimeline(raw.activeTimeline) ??
+        (typeof raw.activeTimelineId === "string"
+          ? (timelines.find((t: Timeline) => t.id === raw.activeTimelineId) ??
+            null)
+          : null);
+      const playbackSpeed =
+        typeof raw.playbackSpeed === "number"
+          ? Math.round(
+              Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, raw.playbackSpeed)),
+            )
+          : get().playbackSpeed;
+      set({ savedPositions, timelines, activeTimeline, playbackSpeed });
     } catch {
       // no or invalid config: keep defaults
     }
@@ -763,8 +837,15 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   persistConfig: () => {
     if (typeof window === "undefined") return;
     try {
-      const { savedPositions, timelines } = get();
-      const payload = { savedPositions, timelines };
+      const { savedPositions, timelines, activeTimeline, playbackSpeed } =
+        get();
+      const payload = {
+        savedPositions,
+        timelines,
+        activeTimeline,
+        activeTimelineId: activeTimeline?.id ?? null,
+        playbackSpeed,
+      };
       if (window.electronAPI?.store?.set) {
         window.electronAPI.store.set("config", payload);
       } else if (typeof localStorage !== "undefined") {

@@ -12,7 +12,6 @@ import {
   FilePlus,
   Repeat,
 } from "lucide-react";
-import PoseThumbnail from "./PoseThumbnail";
 
 const LONG_PRESS_MS = 500;
 
@@ -55,7 +54,7 @@ export default function TimelineStrip() {
   }, [addDelay]);
 
   const handleAddSetSpeed = useCallback(() => {
-    addSetSpeed(50);
+    addSetSpeed(20);
   }, [addSetSpeed]);
 
   const openSaveTimelineModal = useCallback(() => {
@@ -274,19 +273,20 @@ export default function TimelineStrip() {
                       }
                       setTargetOrientation(normalized.orientation);
                     }}
-                    className={`relative w-[88px] h-[88px] rounded-lg overflow-hidden border-2 cursor-pointer transition-colors shadow-lg ${isActive ? "bg-emerald-500/10 border-emerald-500/50 shadow-[0_2px_8px_rgba(16,185,129,0.2)]" : "bg-zinc-900 border-zinc-700 hover:border-indigo-500/60 hover:shadow-indigo-500/10"}`}
+                    className={`relative w-[88px] h-[88px] rounded-lg border-2 cursor-pointer transition-colors shadow-lg flex flex-col justify-center px-2 ${isActive ? "bg-emerald-500/10 border-emerald-500/50 shadow-[0_2px_8px_rgba(16,185,129,0.2)]" : "bg-zinc-900 border-zinc-700 hover:border-indigo-500/60 hover:shadow-indigo-500/10"}`}
                   >
-                    <PoseThumbnail
-                      orientation={normalized.orientation}
-                      className="absolute inset-0 w-full h-full rounded-none border-0"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center py-0.5 bg-zinc-900/95 border-t border-zinc-800">
-                      <span className="text-[9px] font-mono text-zinc-400">
-                        R{Math.round(normalized.orientation.roll)} P
-                        {Math.round(normalized.orientation.pitch)} Y
-                        {Math.round(normalized.orientation.yaw)}
-                      </span>
-                    </div>
+                    <span className="text-[9px] font-mono text-zinc-500 mb-1">
+                      RPY
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-200">
+                      R {Math.round(normalized.orientation.roll)}°
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-200">
+                      P {Math.round(normalized.orientation.pitch)}°
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-200">
+                      Y {Math.round(normalized.orientation.yaw)}°
+                    </span>
                   </div>
                 )}
                 {normalized.type === "delay" && (

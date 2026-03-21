@@ -26,6 +26,51 @@ export default function ConnectionPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const webSerialRef = useRef<WebSerialPortHandle | null>(null);
 
+  const openWebSerialPort = async (port: {
+    open: (opts: { baudRate: number }) => Promise<void>;
+    readable: ReadableStream<Uint8Array>;
+    writable: WritableStream<Uint8Array>;
+    close(): Promise<void>;
+  }) => {
+    await port.open({ baudRate: 115200 });
+    const writer = port.writable.getWriter();
+    window.__webSerialSend = (data: string) => {
+      writer.write(new TextEncoder().encode(data)).catch(() => {});
+    };
+    webSerialRef.current = { port, writer };
+    setConnected(true);
+
+    (async () => {
+      const handle = webSerialRef.current;
+      if (!handle?.port.readable) return;
+      const reader = handle.port.readable.getReader();
+      const decoder = new TextDecoder();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value?.length) {
+            useRobotStore.getState().handleSerialData(decoder.decode(value));
+          }
+        }
+      } catch {
+        // Port closed or disconnected
+      } finally {
+        reader.releaseLock();
+        if (webSerialRef.current?.port === port) {
+          webSerialRef.current = null;
+          window.__webSerialSend = undefined;
+          setConnected(false);
+        }
+      }
+    })();
+
+    setTimeout(() => {
+      const send = window.__webSerialSend;
+      if (send) send("STATUS\n");
+    }, 2500);
+  };
+
   const refreshPorts = async () => {
     if (!window.electronAPI) return;
     setLoading(true);
@@ -59,6 +104,31 @@ export default function ConnectionPanel() {
       window.electronAPI.serial.onData((data: string) => {
         useRobotStore.getState().handleSerialData(data);
       });
+    } else {
+      const nav = navigator as unknown as {
+        serial?: {
+          getPorts?: () => Promise<
+            Array<{
+              open: (opts: { baudRate: number }) => Promise<void>;
+              readable: ReadableStream<Uint8Array>;
+              writable: WritableStream<Uint8Array>;
+              close(): Promise<void>;
+            }>
+          >;
+        };
+      };
+      nav.serial
+        ?.getPorts?.()
+        .then(async (ports) => {
+          if (ports.length > 0 && !webSerialRef.current) {
+            try {
+              await openWebSerialPort(ports[0]);
+            } catch {
+              setConnected(false);
+            }
+          }
+        })
+        .catch(() => {});
     }
   }, [setConnected]);
 
@@ -83,38 +153,7 @@ export default function ConnectionPanel() {
     setListError(null);
     try {
       const port = await nav.serial.requestPort();
-      await port.open({ baudRate: 115200 });
-      const writer = port.writable.getWriter();
-      window.__webSerialSend = (data: string) => {
-        writer.write(new TextEncoder().encode(data)).catch(() => {});
-      };
-      webSerialRef.current = { port, writer };
-      setConnected(true);
-      // Read loop: feed incoming serial data into store (STATUS, done, etc.)
-      (async () => {
-        const handle = webSerialRef.current;
-        if (!handle?.port.readable) return;
-        const reader = handle.port.readable.getReader();
-        const decoder = new TextDecoder();
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            if (value?.length) {
-              useRobotStore.getState().handleSerialData(decoder.decode(value));
-            }
-          }
-        } catch {
-          // Port closed or disconnected
-        } finally {
-          reader.releaseLock();
-        }
-      })();
-      // Request initial STATUS after a short delay (like Electron path)
-      setTimeout(() => {
-        const send = window.__webSerialSend;
-        if (send) send("STATUS\n");
-      }, 2500);
+      await openWebSerialPort(port);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setListError(msg || "Failed to open USB port.");

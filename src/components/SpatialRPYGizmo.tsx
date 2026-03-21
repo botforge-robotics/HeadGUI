@@ -9,6 +9,8 @@ import type { ThreeEvent } from "@react-three/fiber";
 const RADIUS = 0.92;
 const PITCH_RADIUS = 1.08;
 const TUBE_RADIUS = 0.028;
+const HIT_TUBE_RADIUS = 0.11;
+const HIT_THUMB_RADIUS = 0.16;
 
 // Match joint_yaw origin from URDF + 4 cm up in scene (group position y = -GIZMO_CENTER.y)
 const GIZMO_CENTER = { x: 0.021, y: 0.604, z: 0.055 };
@@ -296,6 +298,18 @@ export default function SpatialRPYGizmo() {
                 side={THREE.DoubleSide}
               />
             </mesh>
+            {/* Invisible hit area so orbit controls don't steal drag */}
+            <mesh
+              userData={{ ring }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
+              <tubeGeometry
+                args={[curve, ARC_SEGMENTS, HIT_TUBE_RADIUS, 8, false]}
+              />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
             {/* Line from center to thumb */}
             <line>
               <bufferGeometry>
@@ -324,6 +338,14 @@ export default function SpatialRPYGizmo() {
                 opacity={0.95}
                 depthWrite={false}
               />
+            </mesh>
+            <mesh
+              position={[tx, ty, tz]}
+              userData={{ ring }}
+              onPointerDown={handlePointerDown}
+            >
+              <sphereGeometry args={[HIT_THUMB_RADIUS, 16, 12]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
             {/* Value label */}
             <Html
