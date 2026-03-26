@@ -66,24 +66,43 @@ function waitForDoneSignal(
   set: (s: Partial<RobotState>) => void,
   timeoutMs: number,
 ): Promise<void> {
-  const queuedDoneEvents = get().pendingDoneCount;
-  if (queuedDoneEvents > 0) {
-    set({ pendingDoneCount: queuedDoneEvents - 1 });
-    return Promise.resolve();
-  }
+  const consumeQueuedDone = (): boolean => {
+    const queuedDoneEvents = get().pendingDoneCount;
+    if (queuedDoneEvents <= 0) return false;
+    set({
+      pendingDoneCount: queuedDoneEvents - 1,
+      pendingDoneResolver: null,
+    });
+    return true;
+  };
+
+  if (consumeQueuedDone()) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
-    const t = setTimeout(() => {
+    let settled = false;
+    const finishResolve = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(t);
+      set({ pendingDoneResolver: null });
+      resolve();
+    };
+    const finishReject = () => {
+      if (settled) return;
+      settled = true;
       set({ pendingDoneResolver: null });
       reject(new Error("Serial done timeout"));
-    }, timeoutMs);
+    };
+    const t = setTimeout(finishReject, timeoutMs);
+
     set({
-      pendingDoneResolver: () => {
-        clearTimeout(t);
-        set({ pendingDoneResolver: null });
-        resolve();
-      },
+      pendingDoneResolver: finishResolve,
     });
+
+    // Cover race window: done may be queued just before resolver was armed.
+    if (consumeQueuedDone()) {
+      finishResolve();
+    }
   });
 }
 
