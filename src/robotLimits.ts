@@ -1,8 +1,8 @@
 import type { RobotOrientation } from "./types";
 
 export const ROBOT_LIMITS = {
-  roll: { min: -35, max: 35 },
-  pitch: { min: -35, max: 25 },
+  roll: { min: -30, max: 30 },
+  pitch: { min: -30, max: 25 },
   yaw: { min: -90, max: 90 },
 } as const;
 
