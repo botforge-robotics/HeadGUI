@@ -5,6 +5,7 @@ import TimelineStrip from "./components/TimelineStrip";
 import RightPanel from "./components/RightPanel";
 import ConnectionPanel from "./components/ConnectionPanel";
 import { useRobotStore } from "./store/robotStore";
+import { SPEED_UI_MAX, SPEED_UI_MIN } from "./robotLimits";
 
 export default function App() {
   const {
@@ -17,6 +18,7 @@ export default function App() {
     loadConfig,
     playbackSpeed,
     setPlaybackSpeed,
+    snackbarMessage,
     isConnected,
     isPlaying,
   } = useRobotStore();
@@ -103,13 +105,16 @@ export default function App() {
           );
         })}
         <div className="flex items-center gap-2 pt-1 border-t border-zinc-600/50 mt-1">
-          <span className="text-[10px] font-mono text-zinc-400 w-10">
+          <span
+            className="text-[10px] font-mono text-zinc-400 w-10"
+            title={`Prototype: max ${SPEED_UI_MAX}%`}
+          >
             Speed
           </span>
           <input
             type="range"
-            min={5}
-            max={100}
+            min={SPEED_UI_MIN}
+            max={SPEED_UI_MAX}
             step={5}
             value={playbackSpeed}
             disabled={isPlaying}
@@ -149,6 +154,15 @@ export default function App() {
       <div className="app-timeline-strip">
         <TimelineStrip />
       </div>
+
+      {snackbarMessage && (
+        <div
+          className="fixed bottom-24 left-1/2 z-[100] -translate-x-1/2 max-w-[min(90vw,28rem)] px-4 py-2.5 rounded-xl border border-zinc-600 bg-zinc-900/95 text-zinc-100 text-xs font-medium text-center shadow-lg backdrop-blur-sm pointer-events-none"
+          role="status"
+        >
+          {snackbarMessage}
+        </div>
+      )}
     </div>
   );
 }

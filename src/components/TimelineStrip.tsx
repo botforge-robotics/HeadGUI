@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRobotStore } from "../store/robotStore";
+import { SPEED_UI_DEFAULT, SPEED_UI_MAX, SPEED_UI_MIN } from "../robotLimits";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -54,7 +55,7 @@ export default function TimelineStrip() {
   }, [addDelay]);
 
   const handleAddSetSpeed = useCallback(() => {
-    addSetSpeed(20);
+    addSetSpeed(SPEED_UI_DEFAULT);
   }, [addSetSpeed]);
 
   const openSaveTimelineModal = useCallback(() => {
@@ -128,8 +129,8 @@ export default function TimelineStrip() {
         updateDelayItem(editPopup.id, Math.min(60000, ms));
     } else {
       const p = parseInt(editDraft, 10);
-      if (!Number.isNaN(p) && p >= 5 && p <= 100)
-        updateSetSpeedItem(editPopup.id, Math.max(5, Math.min(100, p)));
+      if (!Number.isNaN(p) && p >= SPEED_UI_MIN)
+        updateSetSpeedItem(editPopup.id, p);
     }
     closeEditPopup();
   }, [
@@ -388,12 +389,14 @@ export default function TimelineStrip() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-xs font-semibold text-zinc-400 mb-3">
-              {editPopup.type === "delay" ? "Delay (ms)" : "Speed (5-100)%"}
+              {editPopup.type === "delay"
+                ? "Delay (ms)"
+                : `Speed (${SPEED_UI_MIN}-${SPEED_UI_MAX})%`}
             </p>
             <input
               type="number"
-              min={editPopup.type === "delay" ? 0 : 5}
-              max={editPopup.type === "delay" ? 60000 : 100}
+              min={editPopup.type === "delay" ? 0 : SPEED_UI_MIN}
+              max={editPopup.type === "delay" ? 60000 : SPEED_UI_MAX}
               value={editDraft}
               onChange={(e) => setEditDraft(e.target.value)}
               className="w-full text-sm font-mono bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-zinc-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 mb-4"

@@ -1,5 +1,12 @@
 import type { RobotOrientation } from "./types";
 
+/** Playback and timeline “set speed” steps: prototype cap (max %). */
+export const SPEED_UI_MIN = 5;
+export const SPEED_UI_MAX = 50;
+export const SPEED_UI_DEFAULT = 50;
+export const SPEED_UI_CAP_MESSAGE =
+  "Locked speed to 50% for this prototype";
+
 export const ROBOT_LIMITS = {
   roll: { min: -30, max: 30 },
   pitch: { min: -30, max: 25 },

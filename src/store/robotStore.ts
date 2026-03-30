@@ -5,10 +5,15 @@ import type {
   TimelineItem,
   SavedPose,
 } from "../types";
-import { clampOrientation } from "../robotLimits";
+import {
+  clampOrientation,
+  SPEED_UI_CAP_MESSAGE,
+  SPEED_UI_DEFAULT,
+  SPEED_UI_MAX,
+  SPEED_UI_MIN,
+} from "../robotLimits";
 
-const SPEED_UI_MIN = 5;
-const SPEED_UI_MAX = 100;
+let snackbarTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Treat legacy items without .type as pose */
 function asTimelineItem(item: any): TimelineItem {
@@ -209,6 +214,8 @@ interface RobotState {
   // Playback
   playbackSpeed: number;
   setPlaybackSpeed: (speed: number) => void;
+  snackbarMessage: string | null;
+  flashSnackbar: (message: string) => void;
   /** Index of timeline item currently playing (null when stopped). */
   playbackActiveIndex: number | null;
   /** 0..1 progress during a delay item (for UI progress bar). */
@@ -261,7 +268,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   isPlaying: false,
   isConnected: false,
   cameraResetTrigger: 0,
-  playbackSpeed: 20,
+  playbackSpeed: SPEED_UI_DEFAULT,
+  snackbarMessage: null,
   isGizmoDragging: false,
   serialLineBuffer: "",
   playbackActiveIndex: null,
@@ -273,9 +281,22 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   requestCameraReset: () =>
     set((s) => ({ cameraResetTrigger: s.cameraResetTrigger + 1 })),
   setGizmoDragging: (v) => set({ isGizmoDragging: v }),
+  flashSnackbar: (message: string) => {
+    if (snackbarTimer) clearTimeout(snackbarTimer);
+    set({ snackbarMessage: message });
+    snackbarTimer = setTimeout(() => {
+      set({ snackbarMessage: null });
+      snackbarTimer = null;
+    }, 3200);
+  },
   setPlaybackSpeed: (speed) => {
-    const percent = Math.round(
-      Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, speed)),
+    const rounded = Math.round(speed);
+    if (rounded > SPEED_UI_MAX) {
+      get().flashSnackbar(SPEED_UI_CAP_MESSAGE);
+    }
+    const percent = Math.max(
+      SPEED_UI_MIN,
+      Math.min(SPEED_UI_MAX, rounded),
     );
     set({ playbackSpeed: percent });
     if (get().isConnected && typeof window !== "undefined") {
@@ -369,8 +390,13 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   updateSetSpeedItem: (id, speedPercent) => {
     const { activeTimeline } = get();
     if (!activeTimeline) return;
-    const percent = Math.round(
-      Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, speedPercent)),
+    const rounded = Math.round(speedPercent);
+    if (rounded > SPEED_UI_MAX) {
+      get().flashSnackbar(SPEED_UI_CAP_MESSAGE);
+    }
+    const percent = Math.max(
+      SPEED_UI_MIN,
+      Math.min(SPEED_UI_MAX, rounded),
     );
     const items = activeTimeline.items.map((it) =>
       it.id === id && it.type === "setspeed"
