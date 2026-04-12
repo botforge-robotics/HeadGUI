@@ -17,6 +17,8 @@ interface WebSerialPortHandle {
   writer: WritableStreamDefaultWriter<Uint8Array>;
 }
 
+type BrowserLinkMode = "usb" | "wireless";
+
 export default function ConnectionPanel() {
   const { isConnected, setConnected } = useRobotStore();
   const [ports, setPorts] = useState<SerialPort[]>([]);
@@ -24,7 +26,23 @@ export default function ConnectionPanel() {
   const [selectedPort, setSelectedPort] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [linkMode, setLinkMode] = useState<BrowserLinkMode>("usb");
+  const [wirelessHost, setWirelessHost] = useState("");
+  const [wirelessPort, setWirelessPort] = useState("8765");
+  const [wirelessToken, setWirelessToken] = useState("");
   const webSerialRef = useRef<WebSerialPortHandle | null>(null);
+  const wirelessWsRef = useRef<WebSocket | null>(null);
+
+  const handleWirelessDisconnect = () => {
+    const ws = wirelessWsRef.current;
+    wirelessWsRef.current = null;
+    window.__webSerialSend = undefined;
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+    }
+    setConnected(false);
+  };
 
   const openWebSerialPort = async (port: {
     open: (opts: { baudRate: number }) => Promise<void>;
@@ -89,6 +107,7 @@ export default function ConnectionPanel() {
   };
 
   useEffect(() => {
+    let cancelled = false;
     refreshPorts();
     if (window.electronAPI) {
       window.electronAPI.serial.onStatus((status) => {
@@ -120,7 +139,12 @@ export default function ConnectionPanel() {
       nav.serial
         ?.getPorts?.()
         .then(async (ports) => {
-          if (ports.length > 0 && !webSerialRef.current) {
+          if (cancelled) return;
+          if (
+            ports.length > 0 &&
+            !webSerialRef.current &&
+            linkMode === "usb"
+          ) {
             try {
               await openWebSerialPort(ports[0]);
             } catch {
@@ -130,9 +154,96 @@ export default function ConnectionPanel() {
         })
         .catch(() => {});
     }
-  }, [setConnected]);
+    return () => {
+      cancelled = true;
+    };
+  }, [setConnected, linkMode]);
+
+  useEffect(() => {
+    return () => {
+      const ws = wirelessWsRef.current;
+      if (ws) {
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
+        wirelessWsRef.current = null;
+      }
+      window.__webSerialSend = undefined;
+    };
+  }, []);
+
+  const handleWebSerialDisconnect = async () => {
+    const handle = webSerialRef.current;
+    webSerialRef.current = null;
+    window.__webSerialSend = undefined;
+    if (handle) {
+      try {
+        await handle.writer.releaseLock();
+        await handle.port.close();
+      } catch {
+        // Ignore if already closed
+      }
+    }
+    setConnected(false);
+  };
+
+  const selectLinkMode = (mode: BrowserLinkMode) => {
+    if (mode === linkMode) return;
+    if (isConnected) {
+      if (linkMode === "usb") void handleWebSerialDisconnect();
+      else handleWirelessDisconnect();
+    }
+    setLinkMode(mode);
+  };
+
+  const handleWirelessConnect = async () => {
+    setListError(null);
+    await handleWebSerialDisconnect();
+    handleWirelessDisconnect();
+    const host = wirelessHost.trim();
+    const portNum = parseInt(wirelessPort.trim(), 10) || 8765;
+    if (!host) {
+      setListError("Enter the bridge host or IP address.");
+      return;
+    }
+    setLoading(true);
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const token = wirelessToken.trim();
+    const qs = token ? `?token=${encodeURIComponent(token)}` : "";
+    const url = `${proto}//${host}:${portNum}${qs}`;
+    const ws = new WebSocket(url);
+    wirelessWsRef.current = ws;
+    ws.onopen = () => {
+      window.__webSerialSend = (data: string) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(data);
+        }
+      };
+      setConnected(true);
+      setLoading(false);
+      setTimeout(() => {
+        window.__webSerialSend?.("STATUS\n");
+      }, 2500);
+    };
+    ws.onmessage = (ev) => {
+      useRobotStore.getState().handleSerialData(String(ev.data));
+    };
+    ws.onerror = () => {
+      setListError("WebSocket connection failed.");
+      setLoading(false);
+    };
+    ws.onclose = () => {
+      wirelessWsRef.current = null;
+      window.__webSerialSend = undefined;
+      setConnected(false);
+      setLoading(false);
+    };
+  };
 
   const handleWebSerialConnect = async () => {
+    handleWirelessDisconnect();
     const nav = navigator as unknown as {
       serial?: {
         requestPort: () => Promise<{
@@ -161,21 +272,6 @@ export default function ConnectionPanel() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleWebSerialDisconnect = async () => {
-    const handle = webSerialRef.current;
-    webSerialRef.current = null;
-    window.__webSerialSend = undefined;
-    if (handle) {
-      try {
-        await handle.writer.releaseLock();
-        await handle.port.close();
-      } catch {
-        // Ignore if already closed
-      }
-    }
-    setConnected(false);
   };
 
   const handleConnect = async () => {
@@ -313,33 +409,134 @@ export default function ConnectionPanel() {
                 </button>
               ) : (
                 <>
-                  {!(navigator as unknown as { serial?: unknown }).serial ? (
-                    <p className="text-xs text-zinc-500">
-                      Web Serial not available. Use Chrome or run the desktop app.
-                    </p>
-                  ) : isConnected ? (
+                  <div className="flex rounded-xl border border-white/5 p-0.5 bg-zinc-950/80 gap-0.5">
                     <button
-                      onClick={handleWebSerialDisconnect}
-                      className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 btn-danger"
-                      title="Disconnect"
-                    >
-                      <XCircle size={16} /> Disconnect USB
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleWebSerialConnect}
+                      type="button"
+                      onClick={() => selectLinkMode("usb")}
                       disabled={loading}
-                      className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 btn-primary"
-                      title="Connect USB"
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        linkMode === "usb"
+                          ? "bg-white/10 text-white shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
                     >
-                      {loading ? (
-                        <RefreshCw size={16} className="animate-spin" />
-                      ) : (
-                        <Cable size={16} />
-                      )}
-                      {loading ? "Opening..." : "Select USB (Chrome)"}
+                      USB
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => selectLinkMode("wireless")}
+                      disabled={loading}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+                        linkMode === "wireless"
+                          ? "bg-white/10 text-white shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      <Wifi size={12} />
+                      Wireless
+                    </button>
+                  </div>
+
+                  {linkMode === "usb" && (
+                    <>
+                      {!(
+                        navigator as unknown as { serial?: unknown }
+                      ).serial ? (
+                        <p className="text-xs text-zinc-500">
+                          Web Serial not available. Use Chrome or run the
+                          desktop app.
+                        </p>
+                      ) : isConnected ? (
+                        <button
+                          onClick={() => void handleWebSerialDisconnect()}
+                          className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 btn-danger"
+                          title="Disconnect"
+                        >
+                          <XCircle size={16} /> Disconnect USB
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => void handleWebSerialConnect()}
+                          disabled={loading}
+                          className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 btn-primary"
+                          title="Connect USB"
+                        >
+                          {loading ? (
+                            <RefreshCw size={16} className="animate-spin" />
+                          ) : (
+                            <Cable size={16} />
+                          )}
+                          {loading ? "Opening..." : "Select USB (Chrome)"}
+                        </button>
+                      )}
+                    </>
                   )}
+
+                  {linkMode === "wireless" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-500 ml-1">
+                        BRIDGE HOST
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 192.168.1.10"
+                        value={wirelessHost}
+                        onChange={(e) => setWirelessHost(e.target.value)}
+                        disabled={isConnected}
+                        className="w-full bg-zinc-900 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 disabled:opacity-50"
+                      />
+                      <label className="text-xs font-medium text-zinc-500 ml-1">
+                        PORT
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="8765"
+                        value={wirelessPort}
+                        onChange={(e) => setWirelessPort(e.target.value)}
+                        disabled={isConnected}
+                        className="w-full bg-zinc-900 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 disabled:opacity-50"
+                      />
+                      <label className="text-xs font-medium text-zinc-500 ml-1">
+                        TOKEN (OPTIONAL)
+                      </label>
+                      <input
+                        type="password"
+                        autoComplete="off"
+                        placeholder="If bridge uses --token"
+                        value={wirelessToken}
+                        onChange={(e) => setWirelessToken(e.target.value)}
+                        disabled={isConnected}
+                        className="w-full bg-zinc-900 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 disabled:opacity-50"
+                      />
+                      {isConnected ? (
+                        <button
+                          type="button"
+                          onClick={handleWirelessDisconnect}
+                          className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 btn-danger"
+                          title="Disconnect wireless"
+                        >
+                          <XCircle size={16} /> Disconnect wireless
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void handleWirelessConnect()}
+                          disabled={loading || !wirelessHost.trim()}
+                          className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed btn-primary"
+                          title="Connect to bridge"
+                        >
+                          {loading ? (
+                            <RefreshCw size={16} className="animate-spin" />
+                          ) : (
+                            <Wifi size={16} />
+                          )}
+                          {loading ? "Connecting..." : "Connect wireless"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {listError && (
                     <p className="text-xs text-amber-500/90">{listError}</p>
                   )}

@@ -45,7 +45,10 @@ export interface SerialStatus {
 
 declare global {
   interface Window {
-    /** When running in browser with Web Serial (Chrome): send serial data. Set by ConnectionPanel when USB port is opened. */
+    /**
+     * Browser-only transport send: Web Serial, or wireless bridge WebSocket (same contract as Electron `serial.send`).
+     * Set by ConnectionPanel when a browser transport is active.
+     */
     __webSerialSend?: (data: string) => void;
     electronAPI?: {
       serial: {

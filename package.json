@@ -15,7 +15,8 @@
     "electron:dev": "concurrently \"npm run dev\" \"npm run electron\"",
     "electron:dev:pi": "concurrently \"npm run dev:pi\" \"npm run electron\"",
     "electron:dev:remote:pi": "concurrently \"npm run dev:remote:pi\" \"npm run electron\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "bridge": "node serial-ws-bridge/index.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.105.4",
@@ -30,7 +31,8 @@
     "three": "^0.163.0",
     "urdf-loader": "^0.12.3",
     "zustand": "^4.5.2",
-    "serialport": "^12.0.0"
+    "serialport": "^12.0.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
