@@ -6,9 +6,9 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "dev:remote": "vite --host",
+    "dev:remote": "cross-env VITE_REMOTE=1 vite --host",
     "dev:pi": "cross-env VITE_NO_WATCH=1 vite",
-    "dev:remote:pi": "cross-env VITE_NO_WATCH=1 vite --host",
+    "dev:remote:pi": "cross-env VITE_NO_WATCH=1 VITE_REMOTE=1 vite --host",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron . --no-sandbox",
