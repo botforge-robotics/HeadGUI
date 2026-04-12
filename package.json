@@ -13,6 +13,8 @@
     "preview": "vite preview",
     "electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron . --no-sandbox",
     "electron:dev": "concurrently \"npm run dev\" \"npm run electron\"",
+    "electron:dev:pi": "concurrently \"npm run dev:pi\" \"npm run electron\"",
+    "electron:dev:remote:pi": "concurrently \"npm run dev:remote:pi\" \"npm run electron\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {

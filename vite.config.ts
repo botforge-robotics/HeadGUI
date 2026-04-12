@@ -15,6 +15,8 @@ function getLanIPv4(): string | undefined {
   return undefined
 }
 
+const noWatch = Boolean(process.env.VITE_NO_WATCH)
+
 const hmrHost =
   process.env.VITE_HMR_HOST ||
   (process.env.VITE_REMOTE === '1' ? getLanIPv4() : undefined)
@@ -24,10 +26,14 @@ export default defineConfig({
   base: './',
   server: {
     port: 5173,
-    // LAN / `vite --host`: HMR must use the same host the browser opened (not localhost).
-    // Override with VITE_HMR_HOST if you have multiple NICs or the auto IP is wrong.
-    hmr: hmrHost ? { host: hmrHost, protocol: 'ws' } : undefined,
+    // With VITE_NO_WATCH, chokidar is off so HMR cannot apply edits; disable HMR to drop WS overhead (Pi).
+    // Otherwise LAN / `vite --host`: HMR must use the same host the browser opened (not localhost).
+    hmr: noWatch
+      ? false
+      : hmrHost
+        ? { host: hmrHost, protocol: 'ws' }
+        : undefined,
     // Disable file watching when VITE_NO_WATCH=1 (e.g. on Raspberry Pi to reduce load)
-    watch: process.env.VITE_NO_WATCH ? null : undefined,
+    watch: noWatch ? null : undefined,
   },
 })
