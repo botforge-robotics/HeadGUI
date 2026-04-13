@@ -90,6 +90,12 @@ npm run electron:dev
 
 ---
 
+## Additional guides
+
+- Remote Wi-Fi + serial bridge setup: `README_REMOTE_WIFI.md`
+
+---
+
 <p align="center">
   <sub>HeadGUI · Robot Head Controller</sub>
 </p>
