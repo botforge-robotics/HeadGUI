@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
+import { ROBOT_LIMITS } from "../robotLimits";
 import { useRobotStore } from "../store/robotStore";
 import type { RobotOrientation } from "../types";
 import type { ThreeEvent } from "@react-three/fiber";
@@ -20,28 +21,25 @@ function getRadius(ring: RingAxis): number {
 }
 const ARC_SEGMENTS = 48;
 const THUMB_RADIUS = 0.06;
-const ROLL_MIN = -45;
-const ROLL_MAX = 45;
-const PITCH_MIN = -35;
-const PITCH_MAX = 30;
-const YAW_MIN = -90;
-const YAW_MAX = 90;
+const { roll: ROLL_LIM, pitch: PITCH_LIM, yaw: YAW_LIM } = ROBOT_LIMITS;
 
 function clampRoll(v: number) {
-  return Math.min(ROLL_MAX, Math.max(ROLL_MIN, v));
+  return Math.min(ROLL_LIM.max, Math.max(ROLL_LIM.min, v));
 }
 function clampPitch(v: number) {
-  return Math.min(PITCH_MAX, Math.max(PITCH_MIN, v));
+  return Math.min(PITCH_LIM.max, Math.max(PITCH_LIM.min, v));
 }
 function clampYaw(v: number) {
-  return Math.min(YAW_MAX, Math.max(YAW_MIN, v));
+  return Math.min(YAW_LIM.max, Math.max(YAW_LIM.min, v));
 }
 
 /** Clamp angle to the visible arc range for each ring so drag/click never flips to opposite side. */
 function clampAngleToArc(ring: RingAxis, angleDeg: number): number {
-  if (ring === "yaw") return Math.min(YAW_MAX, Math.max(YAW_MIN, angleDeg));
-  if (ring === "pitch") return Math.min(PITCH_MAX, Math.max(PITCH_MIN, angleDeg));
-  return Math.min(ROLL_MAX, Math.max(ROLL_MIN, angleDeg));
+  if (ring === "yaw")
+    return Math.min(YAW_LIM.max, Math.max(YAW_LIM.min, angleDeg));
+  if (ring === "pitch")
+    return Math.min(PITCH_LIM.max, Math.max(PITCH_LIM.min, angleDeg));
+  return Math.min(ROLL_LIM.max, Math.max(ROLL_LIM.min, angleDeg));
 }
 
 type RingAxis = "yaw" | "pitch" | "roll";
@@ -104,14 +102,14 @@ class ArcCurve extends THREE.Curve<THREE.Vector3> {
     this.ring = ring;
     const degToRad = Math.PI / 180;
     if (ring === "yaw") {
-      this.start = YAW_MIN * degToRad;
-      this.end = YAW_MAX * degToRad;
+      this.start = YAW_LIM.min * degToRad;
+      this.end = YAW_LIM.max * degToRad;
     } else if (ring === "pitch") {
-      this.start = PITCH_MIN * degToRad;
-      this.end = PITCH_MAX * degToRad;
+      this.start = PITCH_LIM.min * degToRad;
+      this.end = PITCH_LIM.max * degToRad;
     } else {
-      this.start = ROLL_MIN * degToRad;
-      this.end = ROLL_MAX * degToRad;
+      this.start = ROLL_LIM.min * degToRad;
+      this.end = ROLL_LIM.max * degToRad;
     }
   }
   getPoint(t: number) {

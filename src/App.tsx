@@ -5,7 +5,7 @@ import TimelineStrip from "./components/TimelineStrip";
 import RightPanel from "./components/RightPanel";
 import ConnectionPanel from "./components/ConnectionPanel";
 import { useRobotStore } from "./store/robotStore";
-import { SPEED_UI_MAX, SPEED_UI_MIN } from "./robotLimits";
+import { ROBOT_LIMITS, SPEED_UI_MAX, SPEED_UI_MIN } from "./robotLimits";
 
 export default function App() {
   const {
@@ -75,8 +75,8 @@ export default function App() {
         style={{ bottom: 172, right: 248 }}
       >
         {(["roll", "pitch", "yaw"] as const).map((axis) => {
-          const min = axis === "yaw" ? -90 : axis === "pitch" ? -35 : -45;
-          const max = axis === "yaw" ? 90 : axis === "pitch" ? 30 : 45;
+          const min = ROBOT_LIMITS[axis].min;
+          const max = ROBOT_LIMITS[axis].max;
           const value = targetOrientation[axis];
           const step = 0.5;
           return (
