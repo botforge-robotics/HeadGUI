@@ -294,10 +294,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
     if (rounded > SPEED_UI_MAX) {
       get().flashSnackbar(SPEED_UI_CAP_MESSAGE);
     }
-    const percent = Math.max(
-      SPEED_UI_MIN,
-      Math.min(SPEED_UI_MAX, rounded),
-    );
+    const percent = Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, rounded));
     set({ playbackSpeed: percent });
     if (get().isConnected && typeof window !== "undefined") {
       const send = window.electronAPI?.serial?.send ?? window.__webSerialSend;
@@ -394,10 +391,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
     if (rounded > SPEED_UI_MAX) {
       get().flashSnackbar(SPEED_UI_CAP_MESSAGE);
     }
-    const percent = Math.max(
-      SPEED_UI_MIN,
-      Math.min(SPEED_UI_MAX, rounded),
-    );
+    const percent = Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, rounded));
     const items = activeTimeline.items.map((it) =>
       it.id === id && it.type === "setspeed"
         ? { ...it, speedPercent: percent }

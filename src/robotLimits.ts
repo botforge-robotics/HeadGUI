@@ -7,13 +7,13 @@ export const SPEED_UI_DEFAULT = 50;
 export const SPEED_UI_CAP_MESSAGE = "Locked speed to 50% for this prototype";
 
 export const ROBOT_LIMITS = {
-  roll: { min: -30, max: 30 },
-  pitch: { min: -30, max: 30 },
+  roll: { min: -25, max: 25 },
+  pitch: { min: -25, max: 25 },
   yaw: { min: -90, max: 90 },
 } as const;
 
 /** Safety cone: √(roll² + pitch²) ≤ SAFETY_CONE_DEG when both axes are active */
-export const SAFETY_CONE_DEG = 30;
+export const SAFETY_CONE_DEG = 25;
 
 /** Below this (deg), the other RP axis is treated as zero — single-axis slider/gizmo moves skip the cone */
 const AXIS_COUPLE_EPS = 0.5;
