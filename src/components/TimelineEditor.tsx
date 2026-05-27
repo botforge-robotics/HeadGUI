@@ -11,6 +11,7 @@ import {
   Gauge,
 } from "lucide-react";
 import type { TimelineItem } from "../types";
+import { speedInternalToDisplay } from "../speedUi";
 
 export default function TimelineEditor({
   isMini = false,
@@ -172,7 +173,7 @@ export default function TimelineEditor({
                         <div className="flex flex-col items-center gap-1 py-2">
                           <Gauge size={20} className="text-indigo-400/80" />
                           <span className="text-[10px] font-mono text-zinc-200">
-                            {i.speedPercent}%
+                            {speedInternalToDisplay(i.speedPercent)}%
                           </span>
                           <span className="text-[9px] text-zinc-500">
                             Speed

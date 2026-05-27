@@ -5,7 +5,14 @@ import TimelineStrip from "./components/TimelineStrip";
 import RightPanel from "./components/RightPanel";
 import ConnectionPanel from "./components/ConnectionPanel";
 import { useRobotStore } from "./store/robotStore";
-import { ROBOT_LIMITS, SPEED_UI_MAX, SPEED_UI_MIN } from "./robotLimits";
+import { ROBOT_LIMITS } from "./robotLimits";
+import {
+  SPEED_UI_DISPLAY_MAX,
+  SPEED_UI_DISPLAY_MIN,
+  SPEED_UI_DISPLAY_STEP,
+  speedInternalToDisplay,
+  clampSpeedDisplayToInternal,
+} from "./speedUi";
 
 export default function App() {
   const {
@@ -64,6 +71,15 @@ export default function App() {
         <ConnectionPanel />
       </header>
 
+      {/* Top middle: Prototype logo */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <img
+          src="/CandelaLogo_top_corner.svg"
+          alt="Candela"
+          className="h-10 w-auto drop-shadow-lg opacity-90"
+        />
+      </div>
+
       {/* Top right: Saved positions + Sequences (vertical panel with tabs) */}
       <div className="app-right-panel">
         <RightPanel />
@@ -107,25 +123,27 @@ export default function App() {
         <div className="flex items-center gap-2 pt-1 border-t border-zinc-600/50 mt-1">
           <span
             className="text-[10px] font-mono text-zinc-400 w-10"
-            title={`Prototype: max ${SPEED_UI_MAX}%`}
+            title={`Prototype: max ${SPEED_UI_DISPLAY_MAX}%`}
           >
             Speed
           </span>
           <input
             type="range"
-            min={SPEED_UI_MIN}
-            max={SPEED_UI_MAX}
-            step={5}
-            value={playbackSpeed}
+            min={SPEED_UI_DISPLAY_MIN}
+            max={SPEED_UI_DISPLAY_MAX}
+            step={SPEED_UI_DISPLAY_STEP}
+            value={speedInternalToDisplay(playbackSpeed)}
             disabled={isPlaying}
             className="w-20 slider-pitch"
             onChange={(e) => {
-              setPlaybackSpeed(Number(e.target.value));
+              setPlaybackSpeed(
+                clampSpeedDisplayToInternal(Number(e.target.value)),
+              );
             }}
             onPointerDown={(e) => e.stopPropagation()}
           />
           <span className="text-[10px] font-mono text-zinc-300 w-6 tabular-nums">
-            {playbackSpeed}%
+            {speedInternalToDisplay(playbackSpeed)}%
           </span>
         </div>
         <button

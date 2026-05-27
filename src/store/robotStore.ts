@@ -7,7 +7,6 @@ import type {
 } from "../types";
 import {
   clampOrientation,
-  SPEED_UI_CAP_MESSAGE,
   SPEED_UI_DEFAULT,
   SPEED_UI_MAX,
   SPEED_UI_MIN,
@@ -291,9 +290,6 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   },
   setPlaybackSpeed: (speed) => {
     const rounded = Math.round(speed);
-    if (rounded > SPEED_UI_MAX) {
-      get().flashSnackbar(SPEED_UI_CAP_MESSAGE);
-    }
     const percent = Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, rounded));
     set({ playbackSpeed: percent });
     if (get().isConnected && typeof window !== "undefined") {
@@ -388,9 +384,6 @@ export const useRobotStore = create<RobotState>((set, get) => ({
     const { activeTimeline } = get();
     if (!activeTimeline) return;
     const rounded = Math.round(speedPercent);
-    if (rounded > SPEED_UI_MAX) {
-      get().flashSnackbar(SPEED_UI_CAP_MESSAGE);
-    }
     const percent = Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, rounded));
     const items = activeTimeline.items.map((it) =>
       it.id === id && it.type === "setspeed"

@@ -1,6 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRobotStore } from "../store/robotStore";
-import { SPEED_UI_DEFAULT, SPEED_UI_MAX, SPEED_UI_MIN } from "../robotLimits";
+import { SPEED_UI_DEFAULT } from "../robotLimits";
+import {
+  SPEED_UI_DISPLAY_MAX,
+  SPEED_UI_DISPLAY_MIN,
+  speedInternalToDisplay,
+  clampSpeedDisplayToInternal,
+} from "../speedUi";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -113,7 +119,7 @@ export default function TimelineStrip() {
   const openSpeedEdit = useCallback((id: string, value: number) => {
     if (longPressHandled.current) return;
     setEditPopup({ type: "setspeed", id, value });
-    setEditDraft(String(value));
+    setEditDraft(String(speedInternalToDisplay(value)));
   }, []);
 
   const closeEditPopup = useCallback(() => {
@@ -129,8 +135,7 @@ export default function TimelineStrip() {
         updateDelayItem(editPopup.id, Math.min(60000, ms));
     } else {
       const p = parseInt(editDraft, 10);
-      if (!Number.isNaN(p) && p >= SPEED_UI_MIN)
-        updateSetSpeedItem(editPopup.id, p);
+      if (!Number.isNaN(p)) updateSetSpeedItem(editPopup.id, clampSpeedDisplayToInternal(p));
     }
     closeEditPopup();
   }, [
@@ -329,7 +334,7 @@ export default function TimelineStrip() {
                   >
                     <Gauge size={24} className="text-indigo-400/80" />
                     <span className="text-[10px] font-mono text-zinc-200">
-                      {normalized.speedPercent}%
+                      {speedInternalToDisplay(normalized.speedPercent)}%
                     </span>
                     <span className="text-[9px] text-zinc-500">Speed</span>
                   </div>
@@ -391,12 +396,14 @@ export default function TimelineStrip() {
             <p className="text-xs font-semibold text-zinc-400 mb-3">
               {editPopup.type === "delay"
                 ? "Delay (ms)"
-                : `Speed (${SPEED_UI_MIN}-${SPEED_UI_MAX})%`}
+                : `Speed (${SPEED_UI_DISPLAY_MIN}-${SPEED_UI_DISPLAY_MAX})%`}
             </p>
             <input
               type="number"
-              min={editPopup.type === "delay" ? 0 : SPEED_UI_MIN}
-              max={editPopup.type === "delay" ? 60000 : SPEED_UI_MAX}
+              min={editPopup.type === "delay" ? 0 : SPEED_UI_DISPLAY_MIN}
+              max={
+                editPopup.type === "delay" ? 60000 : SPEED_UI_DISPLAY_MAX
+              }
               value={editDraft}
               onChange={(e) => setEditDraft(e.target.value)}
               className="w-full text-sm font-mono bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-zinc-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 mb-4"

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { Component, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid } from "@react-three/drei";
 import * as THREE from "three";
@@ -109,6 +109,52 @@ interface URDFViewerProps {
   yaw: number;
 }
 
+function WebGLFallback({ message }: { message: string }) {
+  return (
+    <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-zinc-950/95 border border-zinc-800">
+      <div className="max-w-md text-center px-6 py-5 rounded-xl border border-zinc-700 bg-zinc-900/90">
+        <h3 className="text-sm font-semibold text-zinc-100 mb-2">
+          3D View Unavailable
+        </h3>
+        <p className="text-xs text-zinc-400 leading-relaxed">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+class CanvasErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorMessage: string }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMessage: "" };
+  }
+
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      errorMessage:
+        error instanceof Error ? error.message : "Failed to create 3D canvas.",
+    };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("Canvas/WebGL initialization failed:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <WebGLFallback
+          message={`WebGL renderer could not be initialized (${this.state.errorMessage}). If you are using Electron, try enabling GPU acceleration or running without restrictive sandbox flags.`}
+        />
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function SceneContent({
   roll,
   pitch,
@@ -159,20 +205,42 @@ function SceneContent({
 }
 
 export default function URDFViewer({ roll, pitch, yaw }: URDFViewerProps) {
+  const hasWebGL = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const canvas = document.createElement("canvas");
+      const gl =
+        canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true }) ||
+        canvas.getContext("webgl", { failIfMajorPerformanceCaveat: true }) ||
+        canvas.getContext("experimental-webgl");
+      return Boolean(gl);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  if (!hasWebGL) {
+    return (
+      <WebGLFallback message="WebGL is disabled or unavailable on this machine/session. The 3D robot preview cannot be shown." />
+    );
+  }
+
   return (
     <div className="absolute inset-0 w-full h-full">
-      <Canvas
-        shadows
-        camera={{ position: [4, -0.6, 4.5], fov: 38 }}
-        gl={{
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.2,
-          outputColorSpace: THREE.SRGBColorSpace,
-        }}
-      >
-        <SceneContent roll={roll} pitch={pitch} yaw={yaw} />
-      </Canvas>
+      <CanvasErrorBoundary>
+        <Canvas
+          shadows
+          camera={{ position: [4, -0.6, 4.5], fov: 38 }}
+          gl={{
+            antialias: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.2,
+            outputColorSpace: THREE.SRGBColorSpace,
+          }}
+        >
+          <SceneContent roll={roll} pitch={pitch} yaw={yaw} />
+        </Canvas>
+      </CanvasErrorBoundary>
     </div>
   );
 }

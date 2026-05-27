@@ -1,0 +1,31 @@
+import {
+  SPEED_UI_MAX,
+  SPEED_UI_MIN,
+} from "./robotLimits";
+
+/**
+ * Prototype mapping:
+ * - Internally / background playback uses SPEED_UI_MIN..SPEED_UI_MAX (currently 5..50).
+ * - Frontend should display the capped max as 0..100 (factor-of-2 relabel).
+ */
+export const SPEED_UI_DISPLAY_FACTOR = 2;
+
+export const SPEED_UI_DISPLAY_MIN = SPEED_UI_MIN * SPEED_UI_DISPLAY_FACTOR;
+export const SPEED_UI_DISPLAY_MAX = SPEED_UI_MAX * SPEED_UI_DISPLAY_FACTOR;
+export const SPEED_UI_DISPLAY_STEP = 5 * SPEED_UI_DISPLAY_FACTOR; // matches internal step=5
+
+export function speedInternalToDisplay(speedPercent: number): number {
+  return speedPercent * SPEED_UI_DISPLAY_FACTOR;
+}
+
+export function speedDisplayToInternal(speedPercentDisplay: number): number {
+  return Math.round(speedPercentDisplay / SPEED_UI_DISPLAY_FACTOR);
+}
+
+export function clampSpeedDisplayToInternal(
+  speedPercentDisplay: number,
+): number {
+  const internal = speedDisplayToInternal(speedPercentDisplay);
+  return Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, internal));
+}
+
