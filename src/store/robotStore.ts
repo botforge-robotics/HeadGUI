@@ -719,7 +719,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
                     index + 1,
                     "sent RPY, waiting for done...",
                   );
-                await waitForSerialDone(api, 120000);
+                await waitForSerialDone(api, 60000);
                 if (DEBUG_SERIAL_DONE)
                   console.log(
                     "[Timeline] pose",
@@ -727,7 +727,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
                     "done received, advancing",
                   );
               } else if (useSerial) {
-                await waitForDoneSignal(get, set, 120000);
+                await waitForDoneSignal(get, set, 60000);
               } else {
                 await new Promise((r) =>
                   setTimeout(
