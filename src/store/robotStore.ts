@@ -236,6 +236,10 @@ interface RobotState {
   // Config JSON persistence (positions + sequences; transferable to another PC)
   loadConfig: () => Promise<void>;
   persistConfig: () => void;
+  /** Download current config as headgui-config.json for sharing across systems. */
+  exportConfig: () => void;
+  /** Replace local config from an imported headgui-config.json object. */
+  importConfig: (raw: unknown) => boolean;
 
   /** Buffer for incomplete serial lines (internal). */
   serialLineBuffer: string;
@@ -885,6 +889,72 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       }
     } catch {
       // ignore
+    }
+  },
+
+  exportConfig: () => {
+    if (typeof window === "undefined") return;
+    try {
+      const { savedPositions, timelines, activeTimeline, playbackSpeed } =
+        get();
+      const payload = {
+        savedPositions,
+        timelines,
+        activeTimeline,
+        activeTimelineId: activeTimeline?.id ?? null,
+        playbackSpeed,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "headgui-config.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      get().flashSnackbar("Config exported as headgui-config.json");
+    } catch {
+      get().flashSnackbar("Failed to export config");
+    }
+  },
+
+  importConfig: (raw) => {
+    if (raw == null || typeof raw !== "object") {
+      get().flashSnackbar("Invalid config file");
+      return false;
+    }
+    try {
+      const data = raw as any;
+      const savedPositions = Array.isArray(data.savedPositions)
+        ? data.savedPositions
+        : [];
+      const timelines: Timeline[] = Array.isArray(data.timelines)
+        ? data.timelines
+            .map((t: any) => normalizePersistedTimeline(t))
+            .filter((t: Timeline | null): t is Timeline => t != null)
+        : [];
+      const activeTimeline =
+        normalizePersistedTimeline(data.activeTimeline) ??
+        (typeof data.activeTimelineId === "string"
+          ? (timelines.find((t) => t.id === data.activeTimelineId) ?? null)
+          : null);
+      const playbackSpeed =
+        typeof data.playbackSpeed === "number"
+          ? Math.round(
+              Math.max(SPEED_UI_MIN, Math.min(SPEED_UI_MAX, data.playbackSpeed)),
+            )
+          : get().playbackSpeed;
+      if (get().isPlaying) get().stopPlayback();
+      set({ savedPositions, timelines, activeTimeline, playbackSpeed });
+      get().persistConfig();
+      get().flashSnackbar(
+        `Imported ${savedPositions.length} poses, ${timelines.length} sequences`,
+      );
+      return true;
+    } catch {
+      get().flashSnackbar("Failed to import config");
+      return false;
     }
   },
 }));

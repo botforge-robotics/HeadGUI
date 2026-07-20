@@ -1,6 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRobotStore } from "../store/robotStore";
-import { Bookmark, ListMusic, Plus, Save, Trash2, Play } from "lucide-react";
+import {
+  Bookmark,
+  Download,
+  ListMusic,
+  Plus,
+  Save,
+  Trash2,
+  Play,
+  Upload,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Tab = "saved" | "sequences";
@@ -11,6 +20,7 @@ export default function RightPanel() {
   const [poseNameDraft, setPoseNameDraft] = useState("");
   const [timelineNameModal, setTimelineNameModal] = useState(false);
   const [timelineNameDraft, setTimelineNameDraft] = useState("");
+  const importInputRef = useRef<HTMLInputElement>(null);
   const {
     savedPositions,
     addSavedPosition,
@@ -25,6 +35,9 @@ export default function RightPanel() {
     playTimeline,
     stopPlayback,
     isPlaying,
+    exportConfig,
+    importConfig,
+    flashSnackbar,
   } = useRobotStore();
 
   const openSavePoseModal = () => {
@@ -56,6 +69,18 @@ export default function RightPanel() {
   };
 
   const handleSaveSequence = () => openSaveTimelineModal();
+
+  const handleImportFile = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      importConfig(data);
+    } catch {
+      flashSnackbar("Could not read config JSON");
+    }
+    if (importInputRef.current) importInputRef.current.value = "";
+  };
 
   return (
     <div className="relative w-full h-full flex flex-col rounded-xl border border-zinc-600/80 bg-zinc-900/95 backdrop-blur-md overflow-hidden shadow-xl">
@@ -251,6 +276,35 @@ export default function RightPanel() {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Export / Import shared config JSON */}
+      <div className="shrink-0 border-t border-zinc-700 p-2 flex gap-2">
+        <button
+          type="button"
+          onClick={exportConfig}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-[11px] font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
+          title="Download headgui-config.json to share on another system"
+        >
+          <Download size={13} />
+          Export
+        </button>
+        <button
+          type="button"
+          onClick={() => importInputRef.current?.click()}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-[11px] font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
+          title="Import headgui-config.json from another system"
+        >
+          <Upload size={13} />
+          Import
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => handleImportFile(e.target.files?.[0] ?? null)}
+        />
       </div>
 
       {/* Save pose name modal */}
