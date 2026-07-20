@@ -83,7 +83,7 @@ export default function RightPanel() {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col rounded-xl border border-zinc-600/80 bg-zinc-900/95 backdrop-blur-md overflow-hidden shadow-xl">
+    <div className="relative w-full h-full min-h-0 flex flex-col rounded-xl border border-zinc-600/80 bg-zinc-900/95 backdrop-blur-md overflow-hidden shadow-xl">
       {/* Tabs */}
       <div className="flex shrink-0 border-b border-zinc-700">
         <button
@@ -110,8 +110,37 @@ export default function RightPanel() {
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-auto">
+      {/* Export / Import pinned above list so they stay visible */}
+      <div className="shrink-0 border-b border-zinc-700 p-2 flex gap-2">
+        <button
+          type="button"
+          onClick={exportConfig}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-[11px] font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
+          title="Download headgui-config.json to share on another system"
+        >
+          <Download size={13} />
+          Export
+        </button>
+        <button
+          type="button"
+          onClick={() => importInputRef.current?.click()}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-[11px] font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
+          title="Import headgui-config.json from another system"
+        >
+          <Upload size={13} />
+          Import
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => handleImportFile(e.target.files?.[0] ?? null)}
+        />
+      </div>
+
+      {/* Content (scrolls; export/import stay fixed above) */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         <AnimatePresence mode="wait">
           {tab === "saved" && (
             <motion.div
@@ -276,35 +305,6 @@ export default function RightPanel() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* Export / Import shared config JSON */}
-      <div className="shrink-0 border-t border-zinc-700 p-2 flex gap-2">
-        <button
-          type="button"
-          onClick={exportConfig}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-[11px] font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
-          title="Download headgui-config.json to share on another system"
-        >
-          <Download size={13} />
-          Export
-        </button>
-        <button
-          type="button"
-          onClick={() => importInputRef.current?.click()}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-[11px] font-semibold btn-glass text-zinc-300 hover:text-white border border-zinc-600"
-          title="Import headgui-config.json from another system"
-        >
-          <Upload size={13} />
-          Import
-        </button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(e) => handleImportFile(e.target.files?.[0] ?? null)}
-        />
       </div>
 
       {/* Save pose name modal */}

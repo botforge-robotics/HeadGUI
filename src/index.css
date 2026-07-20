@@ -59,7 +59,7 @@ body {
   height: 100% !important;
 }
 
-/* Right panel: top-right */
+/* Right panel: top-right (fixed height so inner list scrolls, footer/actions stay visible) */
 .app-right-panel {
   position: absolute !important;
   top: 16px !important;
@@ -67,6 +67,16 @@ body {
   bottom: 180px !important;
   width: 224px !important;
   z-index: 20;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.app-right-panel > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 
 /* Timeline strip: bottom */
