@@ -1,8 +1,8 @@
 import type { RobotOrientation } from "./types";
 
-/** Playback and timeline “set speed” steps: prototype cap (max %). */
+/** Playback and timeline “set speed” steps: matches firmware SPEED 5–100%. */
 export const SPEED_UI_MIN = 5;
-export const SPEED_UI_MAX = 50;
+export const SPEED_UI_MAX = 100;
 export const SPEED_UI_DEFAULT = 25;
 
 export const ROBOT_LIMITS = {

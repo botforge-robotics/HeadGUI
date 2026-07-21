@@ -123,7 +123,7 @@ export default function App() {
         <div className="flex items-center gap-2 pt-1 border-t border-zinc-600/50 mt-1">
           <span
             className="text-[10px] font-mono text-zinc-400 w-10"
-            title={`Prototype: max ${SPEED_UI_DISPLAY_MAX}%`}
+            title={`Speed ${SPEED_UI_DISPLAY_MIN}–${SPEED_UI_DISPLAY_MAX}%`}
           >
             Speed
           </span>

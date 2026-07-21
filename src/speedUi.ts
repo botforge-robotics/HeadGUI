@@ -4,11 +4,9 @@ import {
 } from "./robotLimits";
 
 /**
- * Prototype mapping:
- * - Internally / background playback uses SPEED_UI_MIN..SPEED_UI_MAX (currently 5..50).
- * - Frontend should display the capped max as 0..100 (factor-of-2 relabel).
+ * Slider shows the same % sent to firmware (SPEED 5–100).
  */
-export const SPEED_UI_DISPLAY_FACTOR = 2;
+export const SPEED_UI_DISPLAY_FACTOR = 1;
 
 export const SPEED_UI_DISPLAY_MIN = SPEED_UI_MIN * SPEED_UI_DISPLAY_FACTOR;
 export const SPEED_UI_DISPLAY_MAX = SPEED_UI_MAX * SPEED_UI_DISPLAY_FACTOR;

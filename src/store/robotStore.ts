@@ -736,7 +736,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
                 await new Promise((r) =>
                   setTimeout(
                     r,
-                    item.durationMs * (50 / Math.max(5, currentSpeedPercent)),
+                    item.durationMs *
+                      (SPEED_UI_MAX / Math.max(SPEED_UI_MIN, currentSpeedPercent)),
                   ),
                 );
               }
@@ -752,7 +753,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
             if (get().playbackRunId !== runId) return;
           } else {
             const waitMs =
-              item.durationMs * (50 / Math.max(5, currentSpeedPercent));
+              item.durationMs *
+              (SPEED_UI_MAX / Math.max(SPEED_UI_MIN, currentSpeedPercent));
             await new Promise((resolve) => setTimeout(resolve, waitMs));
           }
         } else if (item.type === "delay") {
