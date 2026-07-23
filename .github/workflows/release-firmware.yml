@@ -15,23 +15,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create GitHub Release with firmware bins
+      - name: Create GitHub Release with firmware bins only
         uses: softprops/action-gh-release@v2
         with:
           name: Firmware ${{ github.ref_name }}
           body: |
-            Canbee Head merged ESP32 firmware images (2× / 3× / 4×).
+            Canbee Head merged ESP32 firmware images (**2× / 3× / 4×**).
 
-            Flash at **0x0**. Board: ESP32 DOIT DevKit V1, 4MB, default.csv.
+            Flash at **`0x0`**. Board: ESP32 DOIT DevKit V1, 4MB, `default.csv`.
 
-            **Flashing guide (Wiki):** https://github.com/botforge-robotics/HeadGUI/wiki/Firmware-Flashing
+            **Download only the `.bin` files below** (ignore GitHub’s auto “Source code” zip/tar).
 
-            Also see `firmware-release/FLASH_README.md` on the `dev` branch.
+            **How to flash:** see [`firmware-release/FLASH_README.md`](https://github.com/botforge-robotics/HeadGUI/blob/dev/firmware-release/FLASH_README.md) on the `dev` branch.
           files: |
             firmware-release/CanbeeHeadFirmware_2x_merged.bin
             firmware-release/CanbeeHeadFirmware_3x_merged.bin
             firmware-release/CanbeeHeadFirmware_4x_merged.bin
-            firmware-release/FLASH_README.md
           fail_on_unmatched_files: true
           generate_release_notes: false
         env:

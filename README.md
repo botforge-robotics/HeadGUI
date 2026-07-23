@@ -93,9 +93,8 @@ npm run electron:dev
 ## Additional guides
 
 - Remote Wi-Fi + serial bridge setup: `README_REMOTE_WIFI.md`
-- Firmware bins (2× / 3× / 4×) + flash notes: [`firmware-release/`](firmware-release/)
-- Firmware flashing wiki: https://github.com/botforge-robotics/HeadGUI/wiki/Firmware-Flashing
-- GitHub Releases (download bins): https://github.com/botforge-robotics/HeadGUI/releases
+- Firmware bins (2× / 3× / 4×) + flash guide: [`firmware-release/`](firmware-release/) (`FLASH_README.md`)
+- Download firmware bins: https://github.com/botforge-robotics/HeadGUI/releases (use the `.bin` files only)
 
 ---
 

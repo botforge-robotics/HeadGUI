@@ -9,8 +9,7 @@ Each `.bin` is a **merged** image (bootloader + partition table + app). Flash it
 
 Download bins from:
 - Repo folder: [`firmware-release/`](https://github.com/botforge-robotics/HeadGUI/tree/dev/firmware-release)
-- GitHub Releases: https://github.com/botforge-robotics/HeadGUI/releases
-- Wiki (this guide): https://github.com/botforge-robotics/HeadGUI/wiki/Firmware-Flashing
+- GitHub Releases: https://github.com/botforge-robotics/HeadGUI/releases (download the **`.bin` files only**; ignore auto “Source code” zip/tar)
 
 ---
 
