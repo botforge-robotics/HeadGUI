@@ -15,14 +15,12 @@ Download bins from:
 
 ## Which bin to use?
 
-| File | Scale | Max at GUI `SPEED 100` | vs old prototype |
+| File | Scale | Max at GUI `SPEED 100` | xx |
 |------|-------|------------------------|------------------|
 | `CanbeeHeadFirmware_2x_merged.bin` | 0.5 | ~100 kHz | **2×** |
 | `CanbeeHeadFirmware_3x_merged.bin` | 0.75 | ~150 kHz | **3×** (recommended default) |
 | `CanbeeHeadFirmware_4x_merged.bin` | 1.0 | ~200 kHz | **4×** |
 
-Old prototype max ≈ 50 kHz (GUI capped at 50% with firmware scale 0.5).  
-HeadGUI must allow up to **100%** speed for these max rates.
 
 Pick one file, then use Method 1 or 2 below (same steps for all three).
 
@@ -31,7 +29,7 @@ Pick one file, then use Method 1 or 2 below (same steps for all three).
 ## Before flashing (both methods)
 
 1. Connect ESP32 USB to PC  
-2. If connection fails: hold **BOOT**, tap **RESET**, release **BOOT**  
+2. If connection fails: hold **BOOT**, tap **RESET**, release **BOOT** (optional)
 3. Note the serial port:
    - Windows: `COM3` (Device Manager → Ports)
    - Linux: `/dev/ttyUSB0` or `/dev/ttyACM0`
