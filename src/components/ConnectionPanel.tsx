@@ -148,6 +148,11 @@ export default function ConnectionPanel() {
             try {
               await openWebSerialPort(ports[0]);
             } catch {
+              try {
+                await ports[0].close();
+              } catch {
+                /* ignore */
+              }
               setConnected(false);
             }
           }
@@ -244,6 +249,7 @@ export default function ConnectionPanel() {
 
   const handleWebSerialConnect = async () => {
     handleWirelessDisconnect();
+    await handleWebSerialDisconnect();
     const nav = navigator as unknown as {
       serial?: {
         requestPort: () => Promise<{
@@ -267,7 +273,13 @@ export default function ConnectionPanel() {
       await openWebSerialPort(port);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setListError(msg || "Failed to open USB port.");
+      if (msg.toLowerCase().includes("failed to open")) {
+        setListError(
+          "Port busy — close Arduino IDE, PuTTY, or any other app using this port, then try again.",
+        );
+      } else {
+        setListError(msg || "Failed to open USB port.");
+      }
       webSerialRef.current = null;
     } finally {
       setLoading(false);
